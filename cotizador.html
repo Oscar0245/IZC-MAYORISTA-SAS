@@ -9,29 +9,16 @@
   <link rel="stylesheet" href="assets/css/auth.css?v=9">
   <link rel="stylesheet" href="assets/css/cotizador.css?v=2">
   <script>
-    (function () {
-      if (location.protocol === 'file:') {
-        location.replace('http://127.0.0.1:8080/cotizador.html');
-        return;
-      }
-      // Live Server u otro puerto: cotizaciones solo se guardan en 8080
-      var local = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
-      if (!local || location.port === '8080' || !location.port) return;
-      fetch('http://127.0.0.1:8080/data/trm.json', { cache: 'no-store' })
-        .then(function (res) {
-          if (res.ok) {
-            location.replace('http://127.0.0.1:8080/cotizador.html' + location.search + location.hash);
-          }
-        })
-        .catch(function () { /* servidor apagado: se mostrará error al guardar */ });
-    })();
+    if (location.protocol === 'file:') {
+      location.replace('http://127.0.0.1:8080/cotizador.html');
+    }
   </script>
   <script src="assets/js/data-loader.js?v=2" defer></script>
   <script src="assets/js/search.js?v=3" defer></script>
   <script src="assets/js/prices.js?v=5" defer></script>
   <script src="assets/js/wishlist.js?v=4" defer></script>
-  <script src="assets/js/auth.js?v=28" defer></script>
-  <script src="assets/js/cotizador.js?v=6" defer></script>
+  <script src="assets/js/auth.js?v=31" defer></script>
+  <script src="assets/js/cotizador.js?v=7" defer></script>
   <script src="assets/js/index.js?v=3" defer></script>
 </head>
 <body>
