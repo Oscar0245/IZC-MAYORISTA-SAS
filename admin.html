@@ -14,9 +14,10 @@
       location.replace('http://127.0.0.1:8080/admin.html');
     }
   </script>
-  <script src="assets/js/auth.js?v=28" defer></script>
+  <script src="assets/js/auth.js?v=30" defer></script>
   <script src="assets/js/wishlist.js?v=4" defer></script>
-  <script src="assets/js/admin.js?v=12" defer></script>
+  <script src="assets/js/admin.js?v=11" defer></script>
+  <script src="assets/js/index.js?v=3" defer></script>
 </head>
 <body>
   <div class="top-bar">
@@ -31,17 +32,179 @@
         <img src="assets/logo/logoizc.png" alt="IZC Mayorista" class="logo-img">
       </a>
       <div class="profile-header-spacer"></div>
-      <a href="favoritos.html" class="header-wishlist" id="headerWishlist" title="Mis favoritos" aria-label="Mis favoritos"><span class="header-wishlist-icon" aria-hidden="true">♥</span></a>
+      <a href="favoritos.html" class="header-wishlist" id="headerWishlist" title="Mis favoritos" aria-label="Mis favoritos"><span class="header-wishlist-icon" aria-hidden="true">&#9829;</span></a>
     </div>
   </header>
 
+  <nav class="main-nav">
+    <div class="nav-inner">
+      <ul>
+        <li class="nav-item has-flyout">
+          <a href="#">&#9776; Nuestros Productos</a>
+          <div class="flyout">
+            <div class="flyout-sidebar">
+              <ul>
+                <li class="flyout-cat active" data-panel="pos">Punto de Venta</li>
+                <li class="flyout-cat" data-panel="marcacion">Marcación y Etiquetado</li>
+                <li class="flyout-cat" data-panel="seguridad">Seguridad Electrónica</li>
+                <li class="flyout-cat" data-panel="conectividad">Cables y conectividad</li>
+                <li class="flyout-cat" data-panel="movilidad">Movilidad</li>
+              </ul>
+            </div>
+
+            <div class="flyout-panel">
+              <div class="flyout-panel-content active" data-panel="pos">
+                <div class="flyout-col">
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=lectores" class="flyout-group-title"><span class="icon">▤</span>Lectores de Códigos de Barras</a>
+                    <ul>
+                      <li><a href="buscar.html?q=lectores-de-mano">De Mano</a></li>
+                      <li><a href="buscar.html?q=lectores-inalambricos">Inalámbricos</a></li>
+                      <li><a href="buscar.html?q=lectores-de-mesa">De Mesa</a></li>
+                      <li><a href="buscar.html?q=lectores-empotrables">Empotrables</a></li>
+                    </ul>
+                  </div>
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=digitalizadores" class="flyout-group-title"><span class="icon">▭</span>Periféricos POS</a>
+                    <ul>
+                      <li><a href="buscar.html?q=digitalizadores">Digitalizadoras de Firmas</a></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="flyout-col">
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=equipos-pos" class="flyout-group-title"><span class="icon">🖳</span>Equipos para Punto de Venta</a>
+                  </div>
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=monitores-touch" class="flyout-group-title"><span class="icon">🖥</span>Monitores Touch</a>
+                  </div>
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=mini-pc" class="flyout-group-title"><span class="icon">🖨</span>Mini PC</a>
+                  </div>
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=balanzas" class="flyout-group-title"><span class="icon">⚖</span>Balanzas</a>
+                  </div>
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=cajones" class="flyout-group-title"><span class="icon">🏷</span>Cajones monederos</a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flyout-panel-content" data-panel="marcacion">
+                <div class="flyout-col">
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=impresoras" class="flyout-group-title"><span class="icon">🏷</span>Impresoras de Etiquetas</a>
+                    <ul>
+                      <li><a href="buscar.html?q=impresoras-escritorio">De escritorio</a></li>
+                      <li><a href="buscar.html?q=impresoras-semi-industriales">Semi industriales</a></li>
+                      <li><a href="buscar.html?q=impresoras-industriales">Industriales</a></li>
+                    </ul>
+                  </div>
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=impresoras-carnet" class="flyout-group-title"><span class="icon">▭</span>Impresoras de carnet</a>
+                  </div>
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=impresoras-manillas" class="flyout-group-title"><span class="icon">▭</span>Impresoras de manillas</a>
+                  </div>
+                </div>
+                <div class="flyout-col">
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=consumibles" class="flyout-group-title"><span class="icon">▭</span>Consumibles</a>
+                    <ul>
+                      <li><a href="buscar.html?q=consumibles-etiquetas">Etiquetas adhesivas</a></li>
+                      <li><a href="buscar.html?q=consumibles-ribbons">Ribbons o Cintas</a></li>
+                      <li><a href="buscar.html?q=consumibles">Manillas para identificación</a></li>
+                      <li><a href="buscar.html?q=consumibles-kits">Kits de limpieza</a></li>
+                    </ul>
+                  </div>
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=impresoras" class="flyout-group-title"><span class="icon">▭</span>Flexografía</a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flyout-panel-content" data-panel="seguridad">
+                <div class="flyout-col">
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=control-acceso" class="flyout-group-title"><span class="icon">📷</span>CONTROL Y VIGILANCIA</a>
+                    <ul>
+                      <li><a href="buscar.html?q=control-acceso">Controles de Acceso y Asistencia</a></li>
+                      <li><a href="buscar.html?q=accesorios-acceso">Accesorios de Control de Acceso</a></li>
+                      <li><a href="buscar.html?q=huella">Lectores de Huella Biométricos</a></li>
+                      <li><a href="buscar.html?q=seguridad">Alarmas</a></li>
+                    </ul>
+                  </div>
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=camaras" class="flyout-group-title"><span class="icon">📷</span>CÁMARAS CCTV</a>
+                    <ul>
+                      <li><a href="buscar.html?q=camaras-ip">Cámaras IP</a></li>
+                      <li><a href="buscar.html?q=camaras-wifi">Cámaras WIFI</a></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="flyout-col">
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=grabadores" class="flyout-group-title"><span class="icon">🔒</span>GRABADORES CCTV</a>
+                    <ul>
+                      <li><a href="buscar.html?q=grabadores-analogo">Grabadores Análogos</a></li>
+                      <li><a href="buscar.html?q=grabadores-ip">Grabadores IP</a></li>
+                    </ul>
+                  </div>
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=accesorios-cctv" class="flyout-group-title"><span class="icon"></span>Accesorios para CCTV</a>
+                    <ul>
+                      <li><a href="buscar.html?q=accesorios-cctv">Accesorios para CCTV</a></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flyout-panel-content" data-panel="conectividad">
+                <div class="flyout-col">
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=red" class="flyout-group-title"><span class="icon">📡</span>CONECTIVIDAD INALÁMBRICA</a>
+                    <ul>
+                      <li><a href="buscar.html?q=access-point">Access Point</a></li>
+                      <li><a href="buscar.html?q=radio-enlaces">Radio Enlaces</a></li>
+                      <li><a href="buscar.html?q=routers">Routers</a></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="flyout-col">
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=switch-poe" class="flyout-group-title"><span class="icon">🔌</span>SWITCH POE</a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flyout-panel-content" data-panel="movilidad">
+                <div class="flyout-col">
+                  <div class="flyout-group">
+                    <a href="buscar.html?q=terminales-moviles" class="flyout-group-title"><span class="icon">📱</span>MOVILIDAD</a>
+                    <ul>
+                      <li><a href="buscar.html?q=impresoras-portatiles">Impresoras Portátiles</a></li>
+                      <li><a href="buscar.html?q=terminales-moviles">Terminales Móviles</a></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <li class="nav-item"><a href="marcas.html">Marcas</a></li>
+        <li class="nav-item"><a href="cotizador.html">Cotizador</a></li>
+        <li class="nav-item"><a href="index.html">Lista de Precios</a></li>
+      </ul>
+    </div>
+  </nav>
+
   <main class="admin-page profile-page">
     <div class="auth-card">
-      <h1><p class="profile-greeting" id="profileGreeting">Hola</h1></p>
+      <h1 class="profile-greeting" id="profileGreeting">Hola</h1>
       <p class="profile-lead">Aquí puedes gestionar el sistema</p>
 
       <button class="auth-submit" type="button" id="profileLogout">Cerrar sesión</button>
-      <p class="auth-switch"><a href="index.html"> · Volver al inicio ·</a></p>
     </div>
 
     <div class="admin-card profile-admin-card" id="adminContent">

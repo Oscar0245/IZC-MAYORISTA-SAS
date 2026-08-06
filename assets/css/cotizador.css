@@ -275,6 +275,8 @@
   margin-top: 16px;
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .cotizador-finish {
@@ -285,6 +287,17 @@
   font-weight: 700;
   padding: 11px 18px;
   cursor: pointer;
+}
+
+.cotizador-finish:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.cotizador-name-cell {
+  max-width: 260px;
+  white-space: normal;
+  line-height: 1.3;
 }
 
 .cotizador-finish:hover {

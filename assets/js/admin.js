@@ -49,7 +49,8 @@
       return fetch(endpoints[i], {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: body
+        body: body,
+        cache: 'no-store'
       }).then(function (res) {
         return res.json().then(function (data) {
           if (!data || typeof data !== 'object') throw new Error('Respuesta inválida');
@@ -60,7 +61,14 @@
       });
     }
 
-    return tryOne(0);
+    function run() {
+      return tryOne(0);
+    }
+
+    if (window.IZCAuth && typeof window.IZCAuth.ensureLocalApi === 'function') {
+      return window.IZCAuth.ensureLocalApi().then(run, run);
+    }
+    return run();
   }
 
   function setActiveTab(tab) {
@@ -275,12 +283,14 @@
     var greet = document.getElementById('profileGreeting');
 
     if (!nit) {
-      setMessage('authMessage', 'Debes iniciar sesión como administrador.', 'error');
+      setMessage('adminMessage', 'Debes iniciar sesión como administrador.', 'error');
       if (input) input.value = '';
       if (nombreInput) nombreInput.value = '';
       if (greet) greet.textContent = 'Hola';
-      setTimeout(function () {
-        window.location.href = 'login.html';
+      window.setTimeout(function () {
+        if (!(window.IZCAuth && IZCAuth.getSessionNit && IZCAuth.getSessionNit())) {
+          window.location.href = 'login.html';
+        }
       }, 800);
       return false;
     }
@@ -296,7 +306,7 @@
       nombreInput.readOnly = true;
     }
     if (greet) greet.textContent = 'Hola ' + (nombre || 'admin');
-    setMessage('authMessage', '', '');
+    setMessage('adminMessage', '', '');
     return true;
   }
 
@@ -425,7 +435,6 @@
   }
 
   function init() {
-    if (!fillProfile()) return;
     bindLogout();
     bindTable();
     bindTabs();
@@ -437,15 +446,27 @@
         loadQuotes({ silent: true });
       }
     });
-    setActiveTab('users');
-    loadQuotes({ silent: true });
-    loadTrmPanel();
     document.addEventListener('izc:auth-changed', function () {
       if (fillProfile()) {
         setActiveTab(activeTab);
         loadQuotes({ silent: true });
         loadTrmPanel();
       }
+    });
+
+    var ready = (window.IZCAuth && IZCAuth.whenSessionReady)
+      ? IZCAuth.whenSessionReady()
+      : Promise.resolve();
+
+    ready.then(function () {
+      if (!fillProfile()) return;
+      setActiveTab('users');
+      loadQuotes({ silent: true });
+      loadTrmPanel();
+    }).catch(function () {
+      if (!fillProfile()) return;
+      setActiveTab('users');
+      loadTrmPanel();
     });
   }
 

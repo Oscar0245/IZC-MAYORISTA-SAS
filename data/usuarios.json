@@ -16,5 +16,11 @@
     "nombre": "Julian",
     "password_hash": "pbkdf2$100000$/W4UoEEe0rGwts4sT/Cr8g==$kXzwcTjXkiK1WV0kev/bLcsdmCkmuw63WAMuwfS7Rsg=",
     "created_at": "2026-08-05T18:40:35.083047+00:00"
+  },
+  {
+    "nit": "3187195533",
+    "nombre": "Josue",
+    "password_hash": "pbkdf2$100000$b7rGIczcVqD5M3urRp+dcA==$0W1TWMN+D8NLiboEDdDpKtXDGn98mGTdhF0eRu5QLDw=",
+    "created_at": "2026-08-04T19:45:19.733Z"
   }
 ]

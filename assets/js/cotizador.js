@@ -1,11 +1,11 @@
-/* Cotizador: líneas por SKU con USD / COP / IVA y nombre de producto */
+/* Cotizador: líneas por SKU con USD / COP / IVA, TRM del admin y guardado al historial */
 (function () {
   'use strict';
 
   var IVA = 0.19;
   var STORAGE_PREFIX = 'izc_cotizador_items_';
-  var TRM_PREFIX = 'izc_cotizador_trm_';
   var DEFAULT_TRM = 3204;
+  var API_ORIGIN = 'http://127.0.0.1:8080';
   var PRECIOS_PATH = 'assets/files/precios.json';
   var PRODUCTOS_PATH = 'assets/files/productos.json';
 
@@ -14,6 +14,7 @@
   var items = [];
   var previewTimer = null;
   var messageTimer = null;
+  var finishing = false;
 
   function isLoggedIn() {
     return !!(window.IZCAuth && IZCAuth.isLoggedIn && IZCAuth.isLoggedIn());
@@ -26,14 +27,16 @@
     return '';
   }
 
+  function getUserNombre() {
+    if (window.IZCAuth && IZCAuth.getSessionNombre) {
+      return String(IZCAuth.getSessionNombre() || '').trim();
+    }
+    return '';
+  }
+
   function itemsStorageKey() {
     var nit = getUserNit();
     return nit ? STORAGE_PREFIX + nit : '';
-  }
-
-  function trmStorageKey() {
-    var nit = getUserNit();
-    return nit ? TRM_PREFIX + nit : '';
   }
 
   function setMessage(text, type) {
@@ -84,28 +87,64 @@
     return n;
   }
 
-  function saveTrm() {
-    var key = trmStorageKey();
-    if (!key) return;
-    try { localStorage.setItem(key, String(getTrm())); } catch (e) { /* ignore */ }
+  function setTrmValue(value) {
+    var input = document.getElementById('cotizadorTrm');
+    var n = Number(value);
+    if (!input || !isFinite(n) || n <= 0) return;
+    input.value = String(n);
   }
 
-  function loadTrm() {
-    var input = document.getElementById('cotizadorTrm');
-    if (!input) return;
-    var key = trmStorageKey();
-    if (!key) {
-      input.value = DEFAULT_TRM;
-      return;
-    }
-    try {
-      var saved = localStorage.getItem(key);
-      if (saved && isFinite(Number(saved)) && Number(saved) > 0) {
-        input.value = saved;
-      } else {
-        input.value = DEFAULT_TRM;
+  function postApi(payload) {
+    var body = JSON.stringify(payload);
+    var endpoints = [
+      API_ORIGIN + '/api/auth',
+      'http://localhost:8080/api/auth',
+      'api/auth',
+      'api/auth.php'
+    ];
+
+    function tryOne(i) {
+      if (i >= endpoints.length) {
+        return Promise.reject(new Error('sin api'));
       }
-    } catch (e) { /* ignore */ }
+      return fetch(endpoints[i], {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body,
+        cache: 'no-store'
+      }).then(function (res) {
+        return res.json().then(function (data) {
+          if (!data || typeof data !== 'object') throw new Error('Respuesta inválida');
+          data._http = res.status;
+          return data;
+        });
+      }).catch(function () {
+        return tryOne(i + 1);
+      });
+    }
+
+    function run() {
+      return tryOne(0);
+    }
+
+    if (window.IZCAuth && typeof window.IZCAuth.ensureLocalApi === 'function') {
+      return window.IZCAuth.ensureLocalApi().then(run, run);
+    }
+    return run();
+  }
+
+  function fetchServerTrm() {
+    return postApi({ action: 'get_trm' }).then(function (data) {
+      if (data && data.ok && data.value != null) {
+        setTrmValue(data.value);
+        return Number(data.value);
+      }
+      setTrmValue(DEFAULT_TRM);
+      return DEFAULT_TRM;
+    }).catch(function () {
+      setTrmValue(DEFAULT_TRM);
+      return DEFAULT_TRM;
+    });
   }
 
   function resolveEntry(entry) {
@@ -168,7 +207,6 @@
     preview.className = 'cotizador-sku-name is-error';
   }
 
-  /* Como se calcula CRM con precio del producto */
   function unitsFromEntry(entry, trm) {
     if (!entry) return null;
     var usd;
@@ -202,15 +240,9 @@
 
   function writeItems(list) {
     var key = itemsStorageKey();
-    if (!key) return;
     items = list;
+    if (!key) return;
     try { localStorage.setItem(key, JSON.stringify(list)); } catch (e) { /* ignore */ }
-  }
-
-  function reloadUserData() {
-    items = readItems();
-    loadTrm();
-    render();
   }
 
   function loadJson(path) {
@@ -272,6 +304,29 @@
     };
   }
 
+  function computeTotals(rows) {
+    var qty = 0;
+    var totalUsd = 0;
+    var totalCop = 0;
+    var totalUsdIva = 0;
+    var totalCopIva = 0;
+    rows.forEach(function (row) {
+      if (!row.ok) return;
+      qty += row.qty;
+      totalUsd += row.totalUsd;
+      totalCop += row.totalCop;
+      totalUsdIva += row.totalUsdIva;
+      totalCopIva += row.totalCopIva;
+    });
+    return {
+      qty: qty,
+      usd: totalUsd,
+      cop: totalCop,
+      usdIva: totalUsdIva,
+      copIva: totalCopIva
+    };
+  }
+
   function render() {
     var body = document.getElementById('cotizadorBody');
     if (!body) return;
@@ -296,7 +351,7 @@
         return (
           '<tr>' +
             '<td>' + escapeHtml(row.sku) + '</td>' +
-            '<td>' + escapeHtml(row.name) + '</td>' +
+            '<td class="cotizador-name-cell" title="' + escapeHtml(row.name) + '">' + escapeHtml(row.name) + '</td>' +
             '<td class="cotizador-qty-cell">' + qtyInputHtml(idx, row.qty) + '</td>' +
             '<td>' + formatUSD(row.usd) + '</td>' +
             '<td>' + formatCOP(row.cop) + '</td>' +
@@ -310,30 +365,20 @@
       }).join('');
     }
 
-    var qty = 0;
-    var totalUsd = 0;
-    var totalCop = 0;
-    var totalUsdIva = 0;
-    var totalCopIva = 0;
-    rows.forEach(function (row) {
-      if (!row.ok) return;
-      qty += row.qty;
-      totalUsd += row.totalUsd;
-      totalCop += row.totalCop;
-      totalUsdIva += row.totalUsdIva;
-      totalCopIva += row.totalCopIva;
-    });
-
+    var totals = computeTotals(rows);
     var elQty = document.getElementById('totalQty');
     var elUsd = document.getElementById('totalUsd');
     var elCop = document.getElementById('totalCop');
     var elUsdIva = document.getElementById('totalUsdIva');
     var elCopIva = document.getElementById('totalCopIva');
-    if (elQty) elQty.textContent = String(qty);
-    if (elUsd) elUsd.textContent = formatUSD(totalUsd);
-    if (elCop) elCop.textContent = formatCOP(totalCop);
-    if (elUsdIva) elUsdIva.textContent = formatUSD(totalUsdIva);
-    if (elCopIva) elCopIva.textContent = formatCOP(totalCopIva);
+    if (elQty) elQty.textContent = String(totals.qty);
+    if (elUsd) elUsd.textContent = formatUSD(totals.usd);
+    if (elCop) elCop.textContent = formatCOP(totals.cop);
+    if (elUsdIva) elUsdIva.textContent = formatUSD(totals.usdIva);
+    if (elCopIva) elCopIva.textContent = formatCOP(totals.copIva);
+
+    var finishBtn = document.getElementById('cotizadorFinish');
+    if (finishBtn) finishBtn.disabled = !rows.some(function (r) { return r.ok; }) || finishing;
   }
 
   function addItem(sku, qty) {
@@ -347,7 +392,7 @@
       setMessage('No hay precio para el código ' + sku + '.', 'error');
       return;
     }
-    
+
     var list = items.slice();
     var found = -1;
     for (var i = 0; i < list.length; i++) {
@@ -367,7 +412,7 @@
     );
     render();
   }
-  
+
   function removeItem(idx) {
     var list = items.slice();
     if (idx < 0 || idx >= list.length) return;
@@ -376,7 +421,7 @@
     setMessage('Producto quitado.', 'ok');
     render();
   }
-  
+
   function updateItemQty(idx, qty) {
     qty = Math.max(1, Math.floor(Number(qty) || 1));
     var list = items.slice();
@@ -386,14 +431,87 @@
     writeItems(list);
     render();
   }
-  
+
   function qtyInputHtml(idx, qty) {
     return (
       '<input type="number" class="cotizador-qty-input" data-idx="' + idx + '" ' +
       'min="1" step="1" value="' + qty + '" aria-label="Cantidad">'
     );
   }
-  
+
+  function buildQuotePayload() {
+    var trm = getTrm();
+    var rows = items.map(function (item) { return lineCalc(item, trm); }).filter(function (r) { return r.ok; });
+    if (!rows.length) return null;
+
+    var totals = computeTotals(rows);
+    return {
+      action: 'save_quote',
+      nit: getUserNit(),
+      nombre: getUserNombre(),
+      trm: trm,
+      items: rows.map(function (row) {
+        return {
+          sku: row.sku,
+          name: row.name,
+          qty: row.qty,
+          usd: row.usd,
+          cop: row.cop,
+          usdIva: row.usdIva,
+          copIva: row.copIva,
+          totalUsd: row.totalUsd,
+          totalCop: row.totalCop,
+          totalUsdIva: row.totalUsdIva,
+          totalCopIva: row.totalCopIva
+        };
+      }),
+      totals: {
+        qty: totals.qty,
+        usd: totals.usd,
+        cop: totals.cop,
+        usdIva: totals.usdIva,
+        copIva: totals.copIva
+      }
+    };
+  }
+
+  function finishQuote() {
+    if (finishing) return;
+    var payload = buildQuotePayload();
+    if (!payload) {
+      setMessage('Agrega al menos un producto con precio para terminar.', 'error');
+      return;
+    }
+    if (!payload.nit) {
+      setMessage('Debes iniciar sesión para guardar la cotización.', 'error');
+      return;
+    }
+
+    finishing = true;
+    render();
+    setMessage('Guardando cotización…', '');
+
+    postApi(payload).then(function (data) {
+      finishing = false;
+      if (!data || !data.ok) {
+        var err = (data && data.error) || 'No se pudo guardar la cotización.';
+        if (/acción no válida|accion no valida/i.test(err)) {
+          err += ' Reinicia el servidor con tools\\ABRIR.bat.';
+        }
+        setMessage(err, 'error');
+        render();
+        return;
+      }
+      writeItems([]);
+      setMessage(data.message || 'Cotización enviada al historial del administrador.', 'ok');
+      render();
+    }).catch(function () {
+      finishing = false;
+      setMessage('No se pudo guardar. Abre tools\\ABRIR.bat (http://127.0.0.1:8080/cotizador.html) e inténtalo de nuevo.', 'error');
+      render();
+    });
+  }
+
   function applyGate() {
     var gate = document.getElementById('cotizadorGate');
     var panel = document.getElementById('cotizadorPanel');
@@ -402,21 +520,25 @@
     if (panel) panel.hidden = !logged;
     return logged;
   }
-  
+
+  function reloadUserData() {
+    items = readItems();
+    render();
+  }
+
   function bind() {
     var form = document.getElementById('cotizadorAddForm');
     var skuInput = document.getElementById('cotizadorSku');
-    var trmInput = document.getElementById('cotizadorTrm');
-    var clearBtn = document.getElementById('cotizadorClear');
+    var finishBtn = document.getElementById('cotizadorFinish');
     var body = document.getElementById('cotizadorBody');
-    
+
     if (skuInput) {
       skuInput.addEventListener('input', function () {
         window.clearTimeout(previewTimer);
         previewTimer = window.setTimeout(updateSkuPreview, 150);
       });
     }
-    
+
     if (form) {
       form.addEventListener('submit', function (e) {
         e.preventDefault();
@@ -433,36 +555,17 @@
         if (sku) sku.focus();
       });
     }
-    
-    if (trmInput) {
-      trmInput.addEventListener('change', function () {
-        saveTrm();
-        render();
-      });
-      trmInput.addEventListener('input', function () {
-        render();
-      });
-    }
-    
-    if (clearBtn) {
-      clearBtn.addEventListener('click', function () {
-        if (!items.length) return;
-        writeItems([]);
-        setMessage('Cotización vacía.', 'ok');
-        render();
-      });
-    }
-    
+
     var removeModal = document.getElementById('cotizadorRemoveModal');
     var removeModalText = document.getElementById('cotizadorRemoveText');
     var removeConfirmBtn = document.getElementById('cotizadorRemoveConfirm');
     var pendingRemoveIdx = -1;
-    
+
     function closeRemoveModal() {
       if (removeModal) removeModal.hidden = true;
       pendingRemoveIdx = -1;
     }
-    
+
     function openRemoveModal(idx) {
       pendingRemoveIdx = idx;
       var item = items[idx];
@@ -475,16 +578,12 @@
       if (removeModal) removeModal.hidden = false;
       if (removeConfirmBtn) removeConfirmBtn.focus();
     }
-    
+
     if (removeModal) {
       removeModal.addEventListener('click', function (e) {
         if (e.target.closest('[data-modal-close]')) closeRemoveModal();
       });
     }
-    
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && removeModal && !removeModal.hidden) closeRemoveModal();
-    });
 
     if (removeConfirmBtn) {
       removeConfirmBtn.addEventListener('click', function () {
@@ -493,6 +592,17 @@
         if (idx >= 0) removeItem(idx);
       });
     }
+
+    if (finishBtn) {
+      finishBtn.addEventListener('click', function () {
+        finishQuote();
+      });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (removeModal && !removeModal.hidden) closeRemoveModal();
+    });
 
     if (body) {
       body.addEventListener('click', function (e) {
@@ -523,7 +633,7 @@
         return;
       }
       reloadUserData();
-      Promise.all([loadPrices(), loadProducts()]).then(function () {
+      Promise.all([loadPrices(), loadProducts(), fetchServerTrm()]).then(function () {
         updateSkuPreview();
         render();
       });
@@ -535,7 +645,7 @@
     var productsPromise = loadProducts();
     if (!applyGate()) return;
     reloadUserData();
-    Promise.all([loadPrices(), productsPromise]).then(function () {
+    Promise.all([loadPrices(), productsPromise, fetchServerTrm()]).then(function () {
       updateSkuPreview();
       render();
     });

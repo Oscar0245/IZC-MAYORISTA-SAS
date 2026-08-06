@@ -2,6 +2,8 @@
 (function () {
   'use strict';
 
+  var redirectTimer = null;
+
   function fillProfile() {
     var nit = (window.IZCAuth && IZCAuth.getSessionNit()) || '';
     var nombre = (window.IZCAuth && IZCAuth.getSessionNombre && IZCAuth.getSessionNombre()) || '';
@@ -18,10 +20,18 @@
       if (input) input.value = '';
       if (nombreInput) nombreInput.value = '';
       if (greet) greet.textContent = 'Hola';
-      setTimeout(function () {
-        window.location.href = 'login.html';
+      if (redirectTimer) window.clearTimeout(redirectTimer);
+      redirectTimer = window.setTimeout(function () {
+        if (!(window.IZCAuth && IZCAuth.getSessionNit && IZCAuth.getSessionNit())) {
+          window.location.href = 'login.html';
+        }
       }, 800);
       return;
+    }
+
+    if (redirectTimer) {
+      window.clearTimeout(redirectTimer);
+      redirectTimer = null;
     }
 
     // El administrador usa admin.html como su perfil
@@ -36,6 +46,10 @@
       nombreInput.readOnly = true;
     }
     if (greet) greet.textContent = 'Hola ' + (nombre || 'cliente');
+    if (msg) {
+      msg.className = 'auth-message';
+      msg.textContent = '';
+    }
   }
 
   function bindLogout() {
@@ -48,9 +62,12 @@
   }
 
   function init() {
-    fillProfile();
     bindLogout();
     document.addEventListener('izc:auth-changed', fillProfile);
+    var ready = (window.IZCAuth && IZCAuth.whenSessionReady)
+      ? IZCAuth.whenSessionReady()
+      : Promise.resolve();
+    ready.then(fillProfile).catch(fillProfile);
   }
 
   if (document.readyState === 'loading') {

@@ -1,5 +1,5 @@
 @echo off
-REM Abre IZC en el navegador; el servidor se inicia o actualiza automaticamente.
+REM Abre IZC: inicia servidores en :8080 y :5500, luego el navegador.
 cd /d "%~dp0.."
 
 if exist "%~dp0INICIAR_VIGILANCIA.vbs" (
@@ -8,7 +8,7 @@ if exist "%~dp0INICIAR_VIGILANCIA.vbs" (
 
 wscript //nologo "%~dp0INICIAR_SERVIDOR.vbs"
 
-REM Esperar a que el servidor responda (archivos e API TRM)
+REM Esperar a que el servidor 8080 responda (archivos e API)
 set /a _n=0
 :wait
 set /a _n+=1

@@ -7,18 +7,31 @@
   <link rel="icon" href="assets/logo/iconoizc.png" type="image/png">
   <link rel="stylesheet" href="assets/css/index.css?v=29">
   <link rel="stylesheet" href="assets/css/auth.css?v=9">
-  <link rel="stylesheet" href="assets/css/cotizador.css?v=1">
+  <link rel="stylesheet" href="assets/css/cotizador.css?v=2">
   <script>
-    if (location.protocol === 'file:') {
-      location.replace('http://127.0.0.1:8080/cotizador.html');
-    }
+    (function () {
+      if (location.protocol === 'file:') {
+        location.replace('http://127.0.0.1:8080/cotizador.html');
+        return;
+      }
+      // Live Server u otro puerto: cotizaciones solo se guardan en 8080
+      var local = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+      if (!local || location.port === '8080' || !location.port) return;
+      fetch('http://127.0.0.1:8080/data/trm.json', { cache: 'no-store' })
+        .then(function (res) {
+          if (res.ok) {
+            location.replace('http://127.0.0.1:8080/cotizador.html' + location.search + location.hash);
+          }
+        })
+        .catch(function () { /* servidor apagado: se mostrará error al guardar */ });
+    })();
   </script>
   <script src="assets/js/data-loader.js?v=2" defer></script>
   <script src="assets/js/search.js?v=3" defer></script>
   <script src="assets/js/prices.js?v=5" defer></script>
   <script src="assets/js/wishlist.js?v=4" defer></script>
-  <script src="assets/js/auth.js?v=26" defer></script>
-  <script src="assets/js/cotizador.js?v=1" defer></script>
+  <script src="assets/js/auth.js?v=28" defer></script>
+  <script src="assets/js/cotizador.js?v=6" defer></script>
   <script src="assets/js/index.js?v=3" defer></script>
 </head>
 <body>
@@ -27,7 +40,7 @@
       <a href="https://api.whatsapp.com/send?phone=573144355391" target="_blank">Soporte Técnico</a>
     </div>
   </div>
-  
+
   <header class="main-header">
     <div class="main-header-inner">
       <a class="logo" href="index.html">
@@ -41,7 +54,7 @@
       <a href="favoritos.html" class="header-wishlist" id="headerWishlist" title="Mis favoritos" aria-label="Mis favoritos"><span class="header-wishlist-icon" aria-hidden="true">♥</span></a>
     </div>
   </header>
-  
+
   <nav class="main-nav">
     <div class="nav-inner">
       <ul>
@@ -51,31 +64,33 @@
         <li class="nav-item"><a href="index.html">Lista de Precios</a></li>
       </ul>
     </div>
-  </nav>+
-  
+  </nav>
+
   <main class="cotizador-page">
     <div class="cotizador-wrap">
       <header class="cotizador-head">
         <div>
           <h1>Cotizador</h1>
-          <p class="cotizador-lead">Agrega productos por código de SKU.</p>
+          <p class="cotizador-lead">Agrega productos por código (SKU). Al terminar, la cotización queda en el historial del administrador.</p>
         </div>
         <div class="cotizador-trm">
           <label for="cotizadorTrm">TRM (COP por 1 USD)</label>
-          <input id="cotizadorTrm" type="number" min="1" step="0.01" value="3204">
+          <input id="cotizadorTrm" type="number" min="1" step="0.01" value="3204" readonly>
+          <p class="cotizador-trm-note">La TRM la actualiza el administrador. Se aplica IVA del 19%.</p>
         </div>
       </header>
-      
+
       <p id="cotizadorGate" class="cotizador-gate" hidden>
         Debes iniciar sesión para cotizar con precios.
         <a href="login.html">Iniciar sesión</a>
       </p>
-      
+
       <section id="cotizadorPanel" class="cotizador-panel" hidden>
         <form id="cotizadorAddForm" class="cotizador-add">
           <div class="cotizador-field">
             <label for="cotizadorSku">Código de producto (SKU)</label>
             <input id="cotizadorSku" name="sku" type="text" inputmode="numeric" placeholder="Ej: 4031" required autocomplete="off">
+            <p id="cotizadorSkuName" class="cotizador-sku-name is-empty" aria-live="polite"></p>
           </div>
           <div class="cotizador-field cotizador-field-qty">
             <label for="cotizadorQty">Cantidad</label>
@@ -84,28 +99,29 @@
           <button type="submit" class="cotizador-add-btn">Agregar</button>
         </form>
         <p id="cotizadorMessage" class="cotizador-message" role="status"></p>
-        
+
         <div class="cotizador-table-wrap">
           <table class="cotizador-table">
             <thead>
               <tr>
                 <th>Código</th>
+                <th>Nombre</th>
                 <th>Cant.</th>
                 <th>USD und.</th>
                 <th>COP und.</th>
-                <th>USD + IVA</th>
-                <th>COP + IVA</th>
+                <th>Total USD</th>
+                <th>Total COP</th>
                 <th>Total USD + IVA</th>
                 <th>Total COP + IVA</th>
                 <th></th>
               </tr>
             </thead>
             <tbody id="cotizadorBody">
-              <tr class="cotizador-empty-row"><td colspan="9">Aún no hay productos en la cotización.</td></tr>
+              <tr class="cotizador-empty-row"><td colspan="10">Aún no hay productos en la cotización.</td></tr>
             </tbody>
           </table>
         </div>
-        
+
         <div class="cotizador-totals">
           <div class="cotizador-total-card">
             <span>Cantidad total</span>
@@ -128,12 +144,24 @@
             <strong id="totalCopIva">$ 0 COP</strong>
           </div>
         </div>
-        
+
         <div class="cotizador-actions">
-          <button type="button" class="cotizador-clear" id="cotizadorClear">Vaciar cotización</button>
+          <button type="button" class="cotizador-finish" id="cotizadorFinish">Terminar cotización</button>
         </div>
       </section>
     </div>
   </main>
+
+  <div class="cotizador-modal" id="cotizadorRemoveModal" hidden>
+    <div class="cotizador-modal-backdrop" data-modal-close></div>
+    <div class="cotizador-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="cotizadorRemoveTitle">
+      <h3 id="cotizadorRemoveTitle">Quitar producto</h3>
+      <p id="cotizadorRemoveText">¿Quieres quitar este producto de la cotización?</p>
+      <div class="cotizador-modal-actions">
+        <button type="button" class="cotizador-modal-cancel" data-modal-close>No, cancelar</button>
+        <button type="button" class="cotizador-modal-confirm" id="cotizadorRemoveConfirm">Sí, quitar</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

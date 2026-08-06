@@ -1,0 +1,91 @@
+[
+    {
+        "id":  "20260805203657510311-03187195533",
+        "nit":  "03187195533",
+        "nombre":  "Julian",
+        "created_at":  "2026-08-05T20:36:57.510387+00:00",
+        "trm":  3204,
+        "items":  [
+                      {
+                          "sku":  "4031",
+                          "name":  "Test",
+                          "qty":  1,
+                          "totalCopIva":  100
+                      }
+                  ],
+        "totals":  {
+                       "copIva":  100
+                   }
+    },
+    {
+        "id":  "20260805203714600732-1109843363",
+        "nit":  "1109843363",
+        "nombre":  "Juan",
+        "created_at":  "2026-08-05T20:37:14.600777+00:00",
+        "trm":  3204,
+        "items":  [
+                      {
+                          "sku":  "4031",
+                          "name":  "SCANER BALANZA IMAGER DATALOGIC MAGELLAN 9300I 1D Y 2D MULTIPLANO /SCALE, METRIC, PLATO LARGO ZAFIRO POLE DISPLAY, 2 CABLES SERIALES",
+                          "qty":  2,
+                          "usd":  962.222222,
+                          "cop":  3082959.999288,
+                          "usdIva":  1145.04444418,
+                          "copIva":  3668722.39915272,
+                          "totalUsd":  1924.444444,
+                          "totalCop":  6165919.998576,
+                          "totalUsdIva":  2290.08888836,
+                          "totalCopIva":  7337444.79830544
+                      },
+                      {
+                          "sku":  "33",
+                          "name":  "INYECTOR POE SAT 48V 30W",
+                          "qty":  4,
+                          "usd":  6.8,
+                          "cop":  21787.2,
+                          "usdIva":  8.091999999999999,
+                          "copIva":  25926.768,
+                          "totalUsd":  27.2,
+                          "totalCop":  87148.8,
+                          "totalUsdIva":  32.367999999999995,
+                          "totalCopIva":  103707.072
+                      }
+                  ],
+        "totals":  {
+                       "qty":  6,
+                       "usd":  1951.644444,
+                       "cop":  6253068.798576,
+                       "usdIva":  2322.45688836,
+                       "copIva":  7441151.870305439
+                   }
+    },
+    {
+        "id":  "20260806082557094325-03187195533",
+        "nit":  "03187195533",
+        "nombre":  "Julian",
+        "created_at":  "2026-08-06T08:25:57.1068358-05:00",
+        "trm":  3202,
+        "items":  [
+                      {
+                          "sku":  "3332",
+                          "name":  "CINTA TT SAT CERA 110MMX450M OUT",
+                          "qty":  4,
+                          "usd":  3.6171181839475333,
+                          "cop":  11582.012425,
+                          "usdIva":  4.304370638897565,
+                          "copIva":  13782.59478575,
+                          "totalUsd":  14.468472735790133,
+                          "totalCop":  46328.0497,
+                          "totalUsdIva":  17.21748255559026,
+                          "totalCopIva":  55130.379143
+                      }
+                  ],
+        "totals":  {
+                       "qty":  4,
+                       "usd":  14.468472735790133,
+                       "cop":  46328.0497,
+                       "usdIva":  17.21748255559026,
+                       "copIva":  55130.379143
+                   }
+    }
+]

@@ -9,6 +9,7 @@ $Root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $UsersFile = Join-Path $Root 'data\usuarios.json'
 $QuotesFile = Join-Path $Root 'data\cotizaciones.json'
 $TrmFile = Join-Path $Root 'data\trm.json'
+$SessionBridgeFile = Join-Path $Root 'data\session_bridge.json'
 $Prefix = "http://127.0.0.1:$Port/"
 
 function Normalize-Nit([string]$nit) {
@@ -223,6 +224,39 @@ function Send-Json($response, $obj, [int]$code = 200) {
   $response.ContentLength64 = $bytes.Length
   $response.OutputStream.Write($bytes, 0, $bytes.Length)
   $response.OutputStream.Close()
+}
+
+function Read-SessionBridge {
+  if (-not (Test-Path $SessionBridgeFile)) {
+    return [ordered]@{ nit = ''; nombre = ''; updated_at = '' }
+  }
+  try {
+    $raw = Get-Content $SessionBridgeFile -Raw -Encoding UTF8
+    if ([string]::IsNullOrWhiteSpace($raw)) {
+      return [ordered]@{ nit = ''; nombre = ''; updated_at = '' }
+    }
+    $data = $raw | ConvertFrom-Json
+    return [ordered]@{
+      nit = Normalize-Nit ([string]$data.nit)
+      nombre = ([string]$data.nombre).Trim()
+      updated_at = [string]$data.updated_at
+    }
+  } catch {
+    return [ordered]@{ nit = ''; nombre = ''; updated_at = '' }
+  }
+}
+
+function Write-SessionBridge([string]$nit, [string]$nombre) {
+  $dir = Split-Path $SessionBridgeFile -Parent
+  if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
+  $entry = [ordered]@{
+    nit = Normalize-Nit $nit
+    nombre = ([string]$nombre).Trim()
+    updated_at = (Get-Date).ToString('o')
+  }
+  $json = ($entry | ConvertTo-Json -Depth 4 -Compress:$false)
+  [System.IO.File]::WriteAllText($SessionBridgeFile, $json + "`n", [System.Text.UTF8Encoding]::new($false))
+  return $entry
 }
 
 function Get-Mime([string]$path) {
@@ -441,6 +475,28 @@ function Handle-Auth($request, $response) {
     return
   }
 
+  if ($action -eq 'set_bridge_session') {
+    $entry = Write-SessionBridge $nit $nombre
+    Send-Json $response @{
+      ok = $true
+      nit = [string]$entry.nit
+      nombre = [string]$entry.nombre
+      updated_at = [string]$entry.updated_at
+    }
+    return
+  }
+
+  if ($action -eq 'get_bridge_session') {
+    $entry = Read-SessionBridge
+    Send-Json $response @{
+      ok = $true
+      nit = [string]$entry.nit
+      nombre = [string]$entry.nombre
+      updated_at = [string]$entry.updated_at
+    }
+    return
+  }
+
   if ($action -eq 'sync') {
     $incoming = @()
     if ($null -ne $body.users) {
@@ -602,6 +658,7 @@ function Handle-Static($request, $response) {
   $response.StatusCode = 200
   $response.ContentType = Get-Mime $full
   $response.Headers.Add('Cache-Control', 'no-store')
+  $response.Headers.Add('Access-Control-Allow-Origin', '*')
   $response.ContentLength64 = $bytes.Length
   $response.OutputStream.Write($bytes, 0, $bytes.Length)
   $response.OutputStream.Close()

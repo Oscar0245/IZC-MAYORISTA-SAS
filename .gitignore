@@ -1,5 +1,7 @@
 ﻿.vscode/
 public/
+data/session_bridge.json
+tools/.servidor_local.sig
 __pycache__/
 *.pyc
 assets/files/.precios-watch.lock

@@ -12,6 +12,7 @@
   var LOCAL_ORIGIN = 'http://127.0.0.1:8080';
   // NITs con acceso a la página de administrador
   var ADMIN_NITS = ['03166122778'];
+  var sessionReadyPromise = Promise.resolve();
 
   function isDevHost() {
     var h = location.hostname;
@@ -40,7 +41,17 @@
     } catch (e) { /* ignore */ }
   }
 
-  function setSessionNit(nit, nombre) {
+  function pushBridgeSession(nit, nombre) {
+    if (!isDevHost()) return;
+    postAuthFile({
+      action: 'set_bridge_session',
+      nit: nit || '',
+      nombre: nombre || ''
+    }).catch(function () { /* servidor apagado */ });
+  }
+
+  function setSessionNit(nit, nombre, opts) {
+    opts = opts || {};
     try {
       if (nit) localStorage.setItem(SESSION_KEY, String(nit));
       else localStorage.removeItem(SESSION_KEY);
@@ -49,6 +60,9 @@
     else if (!nit) setSessionNombre('');
     renderHeaderAuth();
     applyGuestMode();
+    if (!opts.skipBridge) {
+      pushBridgeSession(nit || '', arguments.length > 1 ? (nombre || '') : getSessionNombre());
+    }
     try {
       document.dispatchEvent(new CustomEvent('izc:auth-changed', {
         detail: { nit: nit || '', nombre: getSessionNombre(), loggedIn: !!nit }
@@ -308,7 +322,10 @@
     return null;
   }
 
-  // Carga usuarios desde data/usuarios.json (Live Server, 8080 o GitHub Pages)
+  function whenSessionReady() {
+    return sessionReadyPromise;
+  }
+
   function fetchRemoteUsers() {
     var urls = ['data/usuarios.json'];
     if (isDevHost()) {
@@ -437,13 +454,94 @@
 
   function apiEndpoints() {
     var list = [];
-    // Siempre prioriza el servidor local que escribe data/usuarios.json
-    list.push(LOCAL_ORIGIN + '/api/auth');
     if (isDevHost()) {
+      // Servidor local que escribe data/usuarios.json
+      list.push(LOCAL_ORIGIN + '/api/auth');
       list.push('api/auth');
     }
     list.push('api/auth.php');
     return list;
+  }
+
+  function pingLocalApi() {
+    return fetch(LOCAL_ORIGIN + '/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get_trm' }),
+      cache: 'no-store'
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        return !!(data && data.ok);
+      });
+    });
+  }
+
+  function wakeLocalApiOnce() {
+    try {
+      if (sessionStorage.getItem('izc_wake_tried') === '1') {
+        return Promise.resolve(false);
+      }
+      sessionStorage.setItem('izc_wake_tried', '1');
+    } catch (e) { /* ignore */ }
+
+    try {
+      var frame = document.createElement('iframe');
+      frame.style.cssText = 'position:absolute;width:0;height:0;border:0;visibility:hidden';
+      frame.src = 'izc:ensure';
+      document.documentElement.appendChild(frame);
+      setTimeout(function () {
+        try { frame.remove(); } catch (e2) { /* ignore */ }
+      }, 1500);
+    } catch (e) { /* ignore */ }
+
+    return new Promise(function (resolve) {
+      var attempts = 0;
+      function tick() {
+        attempts += 1;
+        pingLocalApi().then(function (ok) {
+          if (ok) {
+            resolve(true);
+            return;
+          }
+          if (attempts >= 8) {
+            resolve(false);
+            return;
+          }
+          setTimeout(tick, 700);
+        }).catch(function () {
+          if (attempts >= 8) {
+            resolve(false);
+            return;
+          }
+          setTimeout(tick, 700);
+        });
+      }
+      setTimeout(tick, 900);
+    });
+  }
+
+  function ensureLocalApi() {
+    if (!isDevHost()) return Promise.resolve(true);
+    return pingLocalApi().catch(function () { return false; }).then(function (ok) {
+      if (ok) return true;
+      return wakeLocalApiOnce();
+    });
+  }
+
+  function pullBridgeSession() {
+    if (!isDevHost()) return Promise.resolve();
+    return postAuthFile({ action: 'get_bridge_session' }).then(function (data) {
+      if (!data || !data.ok) return;
+      var remoteNit = normalizeNit(data.nit);
+      var localNit = normalizeNit(getSessionNit());
+      if (remoteNit && remoteNit !== localNit) {
+        setSessionNit(remoteNit, data.nombre || '', { skipBridge: true });
+        return;
+      }
+      if (!remoteNit && localNit) {
+        pushBridgeSession(localNit, getSessionNombre());
+      }
+    }).catch(function () { /* ignore */ });
   }
 
   function postAuth(payload) {
@@ -477,11 +575,12 @@
   // Igual que postAuth, pero solo endpoints que pueden escribir el archivo
   function postAuthFile(payload) {
     var body = JSON.stringify(payload);
-    var endpoints = [
-      LOCAL_ORIGIN + '/api/auth',
-      'api/auth.php',
-      'api/auth'
-    ];
+    var endpoints = [];
+    if (isDevHost()) {
+      endpoints.push(LOCAL_ORIGIN + '/api/auth');
+      endpoints.push('api/auth');
+    }
+    endpoints.push('api/auth.php');
     var lastErr = null;
 
     function tryOne(i) {
@@ -630,17 +729,21 @@
       });
     }
 
-    return postAuthFile({ action: 'register', nit: nit, password: password, nombre: nombre })
-      .then(function (data) {
-        if (data && data.ok) {
-          return okResult('Registro exitoso. Guardado en usuarios.json. Ahora inicia sesión.');
-        }
-        if (data && data.error) return data;
-        return registerLocalThenSync();
-      })
-      .catch(function () {
-        return registerLocalThenSync();
-      });
+    function tryRegister() {
+      return postAuthFile({ action: 'register', nit: nit, password: password, nombre: nombre })
+        .then(function (data) {
+          if (data && data.ok) {
+            return okResult('Registro exitoso. Guardado en usuarios.json. Ahora inicia sesión.');
+          }
+          if (data && data.error) return data;
+          return registerLocalThenSync();
+        })
+        .catch(function () {
+          return registerLocalThenSync();
+        });
+    }
+
+    return ensureLocalApi().then(function () { return tryRegister(); });
   }
 
   function login(nit, password) {
@@ -655,17 +758,21 @@
       return loginLocal(nit, password);
     }
 
-    return postAuth({ action: 'login', nit: nit, password: password })
-      .then(function (data) {
-        if (data.ok) {
-          setSessionNit(data.nit, data.nombre || '');
-          return data;
-        }
-        return loginLocal(nit, password);
-      })
-      .catch(function () {
-        return loginLocal(nit, password);
-      });
+    function tryLogin() {
+      return postAuth({ action: 'login', nit: nit, password: password })
+        .then(function (data) {
+          if (data.ok) {
+            setSessionNit(data.nit, data.nombre || '');
+            return data;
+          }
+          return loginLocal(nit, password);
+        })
+        .catch(function () {
+          return loginLocal(nit, password);
+        });
+    }
+
+    return ensureLocalApi().then(function () { return tryLogin(); });
   }
 
   function renderHeaderAuth() {
@@ -814,8 +921,12 @@
       }
       if (data.ok) {
         setMessage(msg, data.message || 'Listo.', 'ok');
-        var dest = mode === 'register' ? 'login.html' : 'index.html';
-        // Redirigir de inmediato
+        var dest = 'index.html';
+        if (mode === 'register') {
+          dest = 'login.html';
+        } else if (isAdminNit(data.nit || nit)) {
+          dest = 'admin.html';
+        }
         window.location.replace(dest);
         return;
       }
@@ -847,7 +958,9 @@
     getUsers: readUsersLocal,
     listUsersForAdmin: listUsersForAdmin,
     deleteUserForAdmin: deleteUserForAdmin,
-    applyGuestMode: applyGuestMode
+    applyGuestMode: applyGuestMode,
+    ensureLocalApi: ensureLocalApi,
+    whenSessionReady: whenSessionReady
   };
 
   function init() {
@@ -857,6 +970,11 @@
     bindAuthForms();
     bindGuestGuards();
     document.addEventListener('izc:auth-changed', applyGuestMode);
+    if (isDevHost()) {
+      sessionReadyPromise = ensureLocalApi().then(function () {
+        return pullBridgeSession();
+      }).catch(function () { /* ignore */ });
+    }
   }
 
   if (document.readyState === 'loading') {
