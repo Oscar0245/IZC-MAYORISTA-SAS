@@ -24,13 +24,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Prepare static site
+        run: |
+          mkdir -p _site
+          rsync -a \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '_site' \
+            --exclude 'src' \
+            --exclude 'scripts' \
+            --exclude 'tools' \
+            --exclude 'node_modules' \
+            --exclude '.vscode' \
+            --exclude '__pycache__' \
+            ./ _site/
+          # Asegura que Jekyll no procese el sitio
+          touch _site/.nojekyll
+          date -u +'IZC Pages Actions %Y-%m-%d %H:%M:%S UTC' > _site/pages-version.txt
+          test -f _site/cotizador.html
+          test -f _site/login.html
+          grep -n 'cotizador.html' _site/index.html | head -n 5
+          grep -n "dest = 'cotizador.html'" _site/assets/js/auth.js | head -n 5
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
       - name: Deploy
         id: deployment
